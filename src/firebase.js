@@ -10,9 +10,12 @@ const firebaseConfig = {
   storageBucket: "waschgehtab-61c62.firebasestorage.app",
   messagingSenderId: "26465431600",
   appId: "1:26465431600:web:fa788390af7503ee907df5",
-  measurementId: "G-X3B31NDT29"
+  measurementId: "G-X3B31NDT29",
 };
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getDatabase(app, "https://waschgehtab-61c62-default-rtdb.europe-west1.firebasedatabase.app");
+export const db = getDatabase(
+  app,
+  "https://waschgehtab-61c62-default-rtdb.europe-west1.firebasedatabase.app"
+);

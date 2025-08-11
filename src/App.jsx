@@ -1,10 +1,14 @@
+import "./index.css";
+import { useState, useEffect } from "react";
 
-import './index.css';
-import { useState, useEffect } from 'react';
-
-import { auth, db } from './firebase';
-import { ref, onValue, set, push, remove, get, update, serverTimestamp } from 'firebase/database';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth, db } from "./firebase";
+import { ref, onValue, set, push, remove, get, update, serverTimestamp } from "firebase/database";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+} from "firebase/auth";
 
 const actionCodeSettings = {
   url: window.location.href,
@@ -13,25 +17,25 @@ const actionCodeSettings = {
 
 function App() {
   const [user, setUser] = useState(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
 
   // Waschmaschinen- und Trocknerstatus aus der DB
   // Status-Objekt mit Phasen: free | busy | paused
-  const [currentStatus, setCurrentStatus] = useState({ phase: 'free', uid: null, name: 'Frei' });
+  const [currentStatus, setCurrentStatus] = useState({ phase: "free", uid: null, name: "Frei" });
   const [queue, setQueue] = useState([]);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [isInQueue, setIsInQueue] = useState(false);
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState("");
   const [showUsernameDialog, setShowUsernameDialog] = useState(false);
-  const [usernameInput, setUsernameInput] = useState('');
+  const [usernameInput, setUsernameInput] = useState("");
 
   // IDs für Geräte
-  const MACHINE_ID = 'washer';
-  const DRYER_ID = 'dryer';
+  const MACHINE_ID = "washer";
+  const DRYER_ID = "dryer";
   // Aktuell nur Waschmaschine implementiert
 
   // Status und Queue aus der DB lesen
@@ -55,11 +59,15 @@ function App() {
     const unsubStatus = onValue(statusRef, (snapshot) => {
       const val = snapshot.val();
       // Normalisierung alter Statuswerte
-      if (!val || val === 'Frei') {
-        setCurrentStatus({ phase: 'free', uid: null, name: 'Frei' });
+      if (!val || val === "Frei") {
+        setCurrentStatus({ phase: "free", uid: null, name: "Frei" });
       } else if (val && !val.phase) {
         // Altes Schema: { uid, name }
-        setCurrentStatus({ phase: val.uid ? 'busy' : 'free', uid: val.uid ?? null, name: val.name ?? 'Frei' });
+        setCurrentStatus({
+          phase: val.uid ? "busy" : "free",
+          uid: val.uid ?? null,
+          name: val.name ?? "Frei",
+        });
       } else {
         setCurrentStatus(val);
       }
@@ -67,10 +75,11 @@ function App() {
     const unsubQueue = onValue(queueRef, (snapshot) => {
       const val = snapshot.val() || {};
       // Queue als Array von Objekten [{id, uid, name, ts}]
-      const arr = Object.entries(val).map(([id, entry]) => ({ id, ...entry }))
+      const arr = Object.entries(val)
+        .map(([id, entry]) => ({ id, ...entry }))
         .sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
       setQueue(arr);
-      setIsInQueue(arr.some(e => e.uid === user.uid));
+      setIsInQueue(arr.some((e) => e.uid === user.uid));
     });
     setIsLoadingStatus(false);
     return () => {
@@ -93,7 +102,7 @@ function App() {
   const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
+    setMessage("");
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       // Username direkt speichern
@@ -101,7 +110,7 @@ function App() {
       setShowUsernameDialog(false);
       setUsername(usernameInput.trim());
     } catch (err) {
-      setMessage('Fehler bei Registrierung: ' + err.message);
+      setMessage("Fehler bei Registrierung: " + err.message);
     }
     setLoading(false);
   };
@@ -110,11 +119,11 @@ function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
+    setMessage("");
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
-      setMessage('Fehler beim Login: ' + err.message);
+      setMessage("Fehler beim Login: " + err.message);
     }
     setLoading(false);
   };
@@ -126,10 +135,10 @@ function App() {
     const queueRef = ref(db, `machines/${MACHINE_ID}/queue`);
     const statusSnap = await get(statusRef);
     const status = statusSnap.val();
-    const phase = (!status || status === 'Frei' || !status.uid) ? 'free' : (status.phase || 'busy');
-    if (phase === 'free') {
+    const phase = !status || status === "Frei" || !status.uid ? "free" : status.phase || "busy";
+    if (phase === "free") {
       // Maschine übernehmen
-      await set(statusRef, { phase: 'busy', uid: user.uid, name: username });
+      await set(statusRef, { phase: "busy", uid: user.uid, name: username });
     } else {
       // In Queue eintragen (mehrfach möglich)
       await push(queueRef, { uid: user.uid, name: username, ts: Date.now() });
@@ -150,22 +159,25 @@ function App() {
         .sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
       if (entries.length > 0) {
         const first = entries[0];
-        await set(statusRef, { phase: 'paused', next: { id: first.id, uid: first.uid, name: first.name } });
+        await set(statusRef, {
+          phase: "paused",
+          next: { id: first.id, uid: first.uid, name: first.name },
+        });
         return; // Eintrag bleibt in der Queue bis Annahme
       }
     }
     // Keine Queue: frei setzen
-    await set(statusRef, { phase: 'free', uid: null, name: 'Frei' });
+    await set(statusRef, { phase: "free", uid: null, name: "Frei" });
   };
 
   // Nächster übernimmt explizit von paused -> busy und Queue-Eintrag löschen
   const handleAcceptNext = async () => {
-    if (!user || currentStatus.phase !== 'paused' || !currentStatus.next) return;
+    if (!user || currentStatus.phase !== "paused" || !currentStatus.next) return;
     const next = currentStatus.next;
     // Nur der vorgesehene Nutzer darf übernehmen
     if (next.uid !== user.uid) return;
     await update(ref(db), {
-      [`machines/${MACHINE_ID}/status`]: { phase: 'busy', uid: next.uid, name: next.name },
+      [`machines/${MACHINE_ID}/status`]: { phase: "busy", uid: next.uid, name: next.name },
       [`machines/${MACHINE_ID}/queue/${next.id}`]: null,
     });
   };
@@ -182,38 +194,43 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-
-
   const handleLogout = async () => {
     await signOut(auth);
-    setMessage('Abgemeldet.');
+    setMessage("Abgemeldet.");
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center min-w-screen justify-center bg-gray-900 text-gray-100">
-      <h1 className="text-3xl font-bold mb-8">WaschGehtAb</h1>
+    <div className="min-h-screen flex flex-col items-center min-w-screen justify-center bg-gray-600 text-gray-100">
+      <h1 className="text-3xl font-bold mb-8 ">WaschGehtAb?</h1>
       {message && <div className="mb-4 text-center text-sm text-blue-400">{message}</div>}
       {!user || showUsernameDialog ? (
         <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-xs flex flex-col items-center">
-          <div className="flex w-full mb-4">
+          <div className="flex w-full mb-4 gap-2">
             <button
-              className={`flex-1 py-2 rounded-l ${!isRegister ? 'bg-blue-700' : 'bg-gray-700'} text-white`}
+              className={`flex-1 py-2 rounded-l ${!isRegister ? "bg-blue-700" : "bg-gray-700"} text-white`}
               onClick={() => setIsRegister(false)}
               type="button"
-            >Login</button>
+            >
+              Login
+            </button>
             <button
-              className={`flex-1 py-2 rounded-r ${isRegister ? 'bg-blue-700' : 'bg-gray-700'} text-white`}
+              className={`flex-1 py-2 rounded-r ${isRegister ? "bg-blue-700" : "bg-gray-700"} text-white`}
               onClick={() => setIsRegister(true)}
               type="button"
-            >Registrieren</button>
+            >
+              Registrieren
+            </button>
           </div>
-          <form onSubmit={isRegister ? handleRegister : handleLogin} className="w-full flex flex-col items-center">
+          <form
+            onSubmit={isRegister ? handleRegister : handleLogin}
+            className="w-full flex flex-col items-center"
+          >
             <input
               type="email"
               className="mb-2 w-full px-3 py-2 rounded bg-gray-700 text-gray-100 focus:outline-none"
               placeholder="E-Mail-Adresse"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
             />
@@ -222,7 +239,7 @@ function App() {
               className="mb-2 w-full px-3 py-2 rounded bg-gray-700 text-gray-100 focus:outline-none"
               placeholder="Passwort"
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
               minLength={6}
@@ -233,7 +250,7 @@ function App() {
                 className="mb-2 w-full px-3 py-2 rounded bg-gray-700 text-gray-100 focus:outline-none"
                 placeholder="Anzeigename"
                 value={usernameInput}
-                onChange={e => setUsernameInput(e.target.value)}
+                onChange={(e) => setUsernameInput(e.target.value)}
                 required
                 maxLength={24}
               />
@@ -243,7 +260,13 @@ function App() {
               className="w-full py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 transition font-semibold"
               disabled={loading}
             >
-              {loading ? (isRegister ? 'Registriere...' : 'Logge ein...') : (isRegister ? 'Registrieren' : 'Login')}
+              {loading
+                ? isRegister
+                  ? "Registriere..."
+                  : "Logge ein..."
+                : isRegister
+                  ? "Registrieren"
+                  : "Login"}
             </button>
           </form>
           {showUsernameDialog && !isRegister && (
@@ -253,7 +276,7 @@ function App() {
                 className="mb-2 w-full px-3 py-2 rounded bg-gray-700 text-gray-100 focus:outline-none"
                 placeholder="Anzeigename"
                 value={usernameInput}
-                onChange={e => setUsernameInput(e.target.value)}
+                onChange={(e) => setUsernameInput(e.target.value)}
                 required
                 maxLength={24}
               />
@@ -270,22 +293,30 @@ function App() {
         <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-xs flex flex-col items-center">
           <div className="mb-4 text-center">
             <p className="text-xl font-bold">Hallo, {username || user.email}!</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Status: <span className="font-bold text-green-400">
-                {currentStatus.phase === 'free' && 'Frei'}
-                {currentStatus.phase === 'busy' && currentStatus.name}
-                {currentStatus.phase === 'paused' && `Pausiert – wartet auf ${currentStatus.next?.name}`}
-              </span>
-            </p>
+            <p className="text-lg text-gray-400 mt-1 flex flex-col">Gerade wäscht:</p>
+            <div className="font-bold text-2xl">
+              {currentStatus.phase === "free" && <span className="text-green-500">Niemand</span>}
+              {currentStatus.phase === "busy" && currentStatus.uid !== user.uid && (
+                <span className="text-red-500">{currentStatus.name}</span>
+              )}
+              {currentStatus.phase === "busy" && currentStatus.uid === user.uid && (
+                <span className="text-green-600">Du</span>
+              )}
+              {currentStatus.phase === "paused" && (
+                <span className="text-yellow-500">
+                  Pausiert – wartet auf {currentStatus.next?.name}
+                </span>
+              )}
+            </div>
           </div>
           <button
             className="w-full py-4 px-4 rounded bg-green-600 hover:bg-green-700 transition font-bold text-xl mb-4"
             onClick={handleMainButton}
             disabled={isLoadingStatus}
           >
-            {currentStatus.phase === 'free' ? 'Waschgang starten' : 'In Queue eintragen'}
+            {currentStatus.phase === "free" ? "Waschgang starten" : "In Queue eintragen"}
           </button>
-          {currentStatus.phase === 'busy' && currentStatus.uid === user.uid && (
+          {currentStatus.phase === "busy" && currentStatus.uid === user.uid && (
             <button
               className="w-full py-2 px-4 rounded bg-yellow-600 hover:bg-yellow-700 transition font-semibold mb-4"
               onClick={handleDone}
@@ -293,7 +324,7 @@ function App() {
               Waschgang beenden
             </button>
           )}
-          {currentStatus.phase === 'paused' && currentStatus.next?.uid === user.uid && (
+          {currentStatus.phase === "paused" && currentStatus.next?.uid === user.uid && (
             <button
               className="w-full py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 transition font-semibold mb-4"
               onClick={handleAcceptNext}
@@ -314,14 +345,18 @@ function App() {
                       <button
                         className="ml-2 text-xs text-red-400 underline"
                         onClick={() => handleRemoveQueueEntry(entry.id)}
-                      >Entfernen</button>
+                      >
+                        Entfernen
+                      </button>
                     )}
                   </li>
                 ))}
               </ul>
             )}
           </div>
-          <button onClick={handleLogout} className="mt-4 text-xs text-gray-400 underline">Logout</button>
+          <button onClick={handleLogout} className="mt-4 text-xs text-gray-400 underline">
+            Logout
+          </button>
         </div>
       )}
       <footer className="mt-10 text-xs text-gray-500">&copy; 2025 WaschGehtAb</footer>

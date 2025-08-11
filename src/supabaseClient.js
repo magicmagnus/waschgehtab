@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 // Supabase-URL und Public Anon Key werden über Vite-Umgebungsvariablen bereitgestellt
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
