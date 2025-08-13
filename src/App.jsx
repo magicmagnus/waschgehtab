@@ -1,8 +1,10 @@
 import "./index.css";
 import { useState, useEffect } from "react";
-
+import { AuthForm } from "./components/AuthForm";
+import { StatusPanel } from "./components/StatusPanel";
+import { QueueList } from "./components/QueueList";
 import { auth, db } from "./firebase";
-import { ref, onValue, set, push, remove, get, update, serverTimestamp } from "firebase/database";
+import { ref, onValue, set, push, remove, get, update } from "firebase/database";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -128,21 +130,22 @@ function App() {
     setLoading(false);
   };
 
-  // Waschgang starten oder in Queue eintragen (mehrfache Einträge möglich)
-  const handleMainButton = async () => {
+  // Waschgang starten (nur wenn frei)
+  const handleStartWash = async () => {
     if (!user || !username) return;
     const statusRef = ref(db, `machines/${MACHINE_ID}/status`);
-    const queueRef = ref(db, `machines/${MACHINE_ID}/queue`);
     const statusSnap = await get(statusRef);
     const status = statusSnap.val();
     const phase = !status || status === "Frei" || !status.uid ? "free" : status.phase || "busy";
-    if (phase === "free") {
-      // Maschine übernehmen
-      await set(statusRef, { phase: "busy", uid: user.uid, name: username });
-    } else {
-      // In Queue eintragen (mehrfach möglich)
-      await push(queueRef, { uid: user.uid, name: username, ts: Date.now() });
-    }
+    if (phase !== "free") return; // safeguard
+    await set(statusRef, { phase: "busy", uid: user.uid, name: username });
+  };
+
+  // Sich in die Queue eintragen (immer möglich, auch mehrfach)
+  const handleJoinQueue = async () => {
+    if (!user || !username) return;
+    const queueRef = ref(db, `machines/${MACHINE_ID}/queue`);
+    await push(queueRef, { uid: user.uid, name: username, ts: Date.now() });
   };
 
   // Waschgang beenden -> auf paused setzen und Next vorschlagen
@@ -200,166 +203,53 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center min-w-screen justify-center bg-gray-600 text-gray-100">
-      <h1 className="text-3xl font-bold mb-8 ">WaschGehtAb?</h1>
+    <div className="min-w-screen flex min-h-screen flex-col items-center justify-start bg-zinc-800 text-gray-100">
+      <h1 className="mb-8 mt-20 text-4xl font-bold">WaschGehtAb?</h1>
       {message && <div className="mb-4 text-center text-sm text-blue-400">{message}</div>}
-      {!user || showUsernameDialog ? (
-        <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-xs flex flex-col items-center">
-          <div className="flex w-full mb-4 gap-2">
-            <button
-              className={`flex-1 py-2 rounded-l ${!isRegister ? "bg-blue-700" : "bg-gray-700"} text-white`}
-              onClick={() => setIsRegister(false)}
-              type="button"
-            >
-              Login
-            </button>
-            <button
-              className={`flex-1 py-2 rounded-r ${isRegister ? "bg-blue-700" : "bg-gray-700"} text-white`}
-              onClick={() => setIsRegister(true)}
-              type="button"
-            >
-              Registrieren
-            </button>
-          </div>
-          <form
-            onSubmit={isRegister ? handleRegister : handleLogin}
-            className="w-full flex flex-col items-center"
-          >
-            <input
-              type="email"
-              className="mb-2 w-full px-3 py-2 rounded bg-gray-700 text-gray-100 focus:outline-none"
-              placeholder="E-Mail-Adresse"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading}
-            />
-            <input
-              type="password"
-              className="mb-2 w-full px-3 py-2 rounded bg-gray-700 text-gray-100 focus:outline-none"
-              placeholder="Passwort"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-              minLength={6}
-            />
-            {isRegister && (
-              <input
-                type="text"
-                className="mb-2 w-full px-3 py-2 rounded bg-gray-700 text-gray-100 focus:outline-none"
-                placeholder="Anzeigename"
-                value={usernameInput}
-                onChange={(e) => setUsernameInput(e.target.value)}
-                required
-                maxLength={24}
-              />
-            )}
-            <button
-              type="submit"
-              className="w-full py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 transition font-semibold"
-              disabled={loading}
-            >
-              {loading
-                ? isRegister
-                  ? "Registriere..."
-                  : "Logge ein..."
-                : isRegister
-                  ? "Registrieren"
-                  : "Login"}
-            </button>
-          </form>
-          {showUsernameDialog && !isRegister && (
-            <form onSubmit={handleSaveUsername} className="w-full flex flex-col items-center mt-4">
-              <input
-                type="text"
-                className="mb-2 w-full px-3 py-2 rounded bg-gray-700 text-gray-100 focus:outline-none"
-                placeholder="Anzeigename"
-                value={usernameInput}
-                onChange={(e) => setUsernameInput(e.target.value)}
-                required
-                maxLength={24}
-              />
-              <button
-                type="submit"
-                className="w-full py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 transition font-semibold"
-              >
-                Anzeigename speichern
-              </button>
-            </form>
-          )}
-        </div>
-      ) : (
-        <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-xs flex flex-col items-center">
-          <div className="mb-4 text-center">
-            <p className="text-xl font-bold">Hallo, {username || user.email}!</p>
-            <p className="text-lg text-gray-400 mt-1 flex flex-col">Gerade wäscht:</p>
-            <div className="font-bold text-2xl">
-              {currentStatus.phase === "free" && <span className="text-green-500">Niemand</span>}
-              {currentStatus.phase === "busy" && currentStatus.uid !== user.uid && (
-                <span className="text-red-500">{currentStatus.name}</span>
-              )}
-              {currentStatus.phase === "busy" && currentStatus.uid === user.uid && (
-                <span className="text-green-600">Du</span>
-              )}
-              {currentStatus.phase === "paused" && (
-                <span className="text-yellow-500">
-                  Pausiert – wartet auf {currentStatus.next?.name}
-                </span>
-              )}
-            </div>
-          </div>
-          <button
-            className="w-full py-4 px-4 rounded bg-green-600 hover:bg-green-700 transition font-bold text-xl mb-4"
-            onClick={handleMainButton}
-            disabled={isLoadingStatus}
-          >
-            {currentStatus.phase === "free" ? "Waschgang starten" : "In Queue eintragen"}
-          </button>
-          {currentStatus.phase === "busy" && currentStatus.uid === user.uid && (
-            <button
-              className="w-full py-2 px-4 rounded bg-yellow-600 hover:bg-yellow-700 transition font-semibold mb-4"
-              onClick={handleDone}
-            >
-              Waschgang beenden
-            </button>
-          )}
-          {currentStatus.phase === "paused" && currentStatus.next?.uid === user.uid && (
-            <button
-              className="w-full py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 transition font-semibold mb-4"
-              onClick={handleAcceptNext}
-            >
-              Ich wasche jetzt
-            </button>
-          )}
-          <div className="w-full mt-2">
-            <h2 className="text-md font-semibold mb-2">Warteschlange:</h2>
-            {queue.length === 0 ? (
-              <p className="text-gray-400">Niemand wartet.</p>
-            ) : (
-              <ul className="list-disc list-inside text-gray-200">
-                {queue.map((entry, idx) => (
-                  <li key={entry.id} className="flex items-center justify-between">
-                    <span>{entry.name}</span>
-                    {entry.uid === user.uid && (
-                      <button
-                        className="ml-2 text-xs text-red-400 underline"
-                        onClick={() => handleRemoveQueueEntry(entry.id)}
-                      >
-                        Entfernen
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <button onClick={handleLogout} className="mt-4 text-xs text-gray-400 underline">
-            Logout
-          </button>
-        </div>
-      )}
-      <footer className="mt-10 text-xs text-gray-500">&copy; 2025 WaschGehtAb</footer>
+      <div className="flex w-full max-w-md flex-col items-center bg-zinc-700 p-6 pt-4 shadow-lg">
+        {!user || showUsernameDialog ? (
+          <AuthForm
+            isRegister={isRegister}
+            setIsRegister={setIsRegister}
+            email={email}
+            setEmail={setEmail}
+            password={password}
+            setPassword={setPassword}
+            usernameInput={usernameInput}
+            setUsernameInput={setUsernameInput}
+            loading={loading}
+            handleRegister={handleRegister}
+            handleLogin={handleLogin}
+            showUsernameDialog={showUsernameDialog}
+            handleSaveUsername={handleSaveUsername}
+          />
+        ) : (
+          <StatusPanel
+            user={user}
+            username={username}
+            currentStatus={currentStatus}
+            queue={queue}
+            isLoadingStatus={isLoadingStatus}
+            handleStartWash={handleStartWash}
+            handleJoinQueue={handleJoinQueue}
+            handleDone={handleDone}
+            handleAcceptNext={handleAcceptNext}
+            handleRemoveQueueEntry={handleRemoveQueueEntry}
+            handleLogout={handleLogout}
+          />
+        )}
+        <QueueList
+          queue={queue}
+          user={user}
+          currentStatus={currentStatus}
+          onRemove={handleRemoveQueueEntry}
+          onJoin={handleJoinQueue}
+        />
+        <button onClick={handleLogout} className="mt-8 text-xs text-gray-400 underline">
+          Logout
+        </button>
+        <footer className="mt-10 text-xs text-gray-500">&copy; 2025 WaschGehtAb</footer>
+      </div>
     </div>
   );
 }

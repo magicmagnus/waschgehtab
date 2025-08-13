@@ -1,0 +1,96 @@
+export function StatusPanel({
+  user,
+  username,
+  currentStatus,
+  isLoadingStatus,
+  handleStartWash,
+  handleDone,
+  handleAcceptNext,
+}) {
+  const isMine = currentStatus.uid && currentStatus.uid === user?.uid;
+  const isNextMine = currentStatus.next?.uid === user?.uid;
+
+  let currentTextColor;
+  let currentBGColor;
+  switch (currentStatus.phase) {
+    case "free":
+      currentTextColor = "text-green-500";
+      currentBGColor = "bg-green-200";
+      break;
+    case "busy":
+      currentTextColor = isMine ? "text-green-500" : "text-red-600";
+      currentBGColor = isMine ? "bg-green-200" : "bg-red-200";
+      break;
+    case "paused":
+      currentTextColor = "text-yellow-500";
+      currentBGColor = "bg-yellow-100";
+      break;
+    default:
+      currentTextColor = "text-gray-500";
+      currentBGColor = "bg-zinc-100";
+  }
+  return (
+    <div className="flex w-full flex-col items-center justify-center pb-4">
+      <p className="pb-4 text-xl font-semibold">Hallo, {username || user.email}!</p>
+      <div
+        className={`${currentTextColor} ${currentBGColor} w-full flex flex-col h-68 min-h-[17rem] items-stretch shadow-lg p-5 border-3 rounded-xl`}
+      >
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+          {currentStatus.phase === "free" && (
+            <div className="flex flex-col items-center gap-0">
+              <p className="text-gray-500">Die Waschmaschine ist</p>
+              <p className="pb-8 pt-4 text-6xl font-bold">Frei!</p>
+            </div>
+          )}
+          {currentStatus.phase === "busy" && (
+            <div className="flex flex-col items-center gap-0">
+              <p className="text-gray-500">Gerade am Waschen:</p>
+              <p className="pb-8 pt-4 text-6xl font-bold">{isMine ? "Ich" : currentStatus.name}</p>
+            </div>
+          )}
+          {currentStatus.phase === "paused" && (
+            <div className="flex flex-col items-center gap-0">
+              <p className="text-gray-500">Pausiert – warten auf:</p>
+              <p className="pb-8 pt-4 text-6xl font-bold">
+                {isNextMine ? "Dich" : currentStatus.next?.name}
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="mt-auto flex w-full flex-col items-center gap-3">
+          {currentStatus.phase === "free" && (
+            <button
+              className="w-fit rounded-full bg-green-500 px-10 py-4 text-2xl font-bold text-green-100 transition hover:bg-green-700"
+              onClick={handleStartWash}
+              disabled={isLoadingStatus}
+            >
+              Waschgang
+              <br />
+              starten
+            </button>
+          )}
+          {currentStatus.phase === "busy" && isMine && (
+            <button
+              className="w-fit rounded-full bg-yellow-600 px-10 py-4 text-2xl font-bold text-yellow-100 transition hover:bg-yellow-700"
+              onClick={handleDone}
+            >
+              Waschgang
+              <br />
+              beenden
+            </button>
+          )}
+          {currentStatus.phase === "paused" && currentStatus.next?.uid === user.uid && (
+            <button
+              className="w-fit rounded-full bg-yellow-600 px-10 py-4 text-2xl font-bold text-yellow-100 transition hover:bg-yellow-700"
+              onClick={handleAcceptNext}
+            >
+              Ich wasche
+              <br />
+              jetzt
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
