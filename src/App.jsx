@@ -203,27 +203,26 @@ function App() {
   };
 
   return (
-    <div className="min-w-screen flex min-h-screen flex-col items-center justify-start bg-zinc-800 text-gray-100">
-      <h1 className="mb-8 mt-20 text-4xl font-bold">WaschGehtAb?</h1>
+    <div className="min-w-screen flex min-h-screen flex-col items-center justify-between bg-zinc-900 p-6 pt-4 text-gray-100 shadow-lg">
       {message && <div className="mb-4 text-center text-sm text-blue-400">{message}</div>}
-      <div className="flex w-full max-w-md flex-col items-center bg-zinc-700 p-6 pt-4 shadow-lg">
-        {!user || showUsernameDialog ? (
-          <AuthForm
-            isRegister={isRegister}
-            setIsRegister={setIsRegister}
-            email={email}
-            setEmail={setEmail}
-            password={password}
-            setPassword={setPassword}
-            usernameInput={usernameInput}
-            setUsernameInput={setUsernameInput}
-            loading={loading}
-            handleRegister={handleRegister}
-            handleLogin={handleLogin}
-            showUsernameDialog={showUsernameDialog}
-            handleSaveUsername={handleSaveUsername}
-          />
-        ) : (
+      {!user || showUsernameDialog ? (
+        <AuthForm
+          isRegister={isRegister}
+          setIsRegister={setIsRegister}
+          email={email}
+          setEmail={setEmail}
+          password={password}
+          setPassword={setPassword}
+          usernameInput={usernameInput}
+          setUsernameInput={setUsernameInput}
+          loading={loading}
+          handleRegister={handleRegister}
+          handleLogin={handleLogin}
+          showUsernameDialog={showUsernameDialog}
+          handleSaveUsername={handleSaveUsername}
+        />
+      ) : (
+        <div className="flex w-full flex-col items-center">
           <StatusPanel
             user={user}
             username={username}
@@ -237,18 +236,20 @@ function App() {
             handleRemoveQueueEntry={handleRemoveQueueEntry}
             handleLogout={handleLogout}
           />
-        )}
-        <QueueList
-          queue={queue}
-          user={user}
-          currentStatus={currentStatus}
-          onRemove={handleRemoveQueueEntry}
-          onJoin={handleJoinQueue}
-        />
+          <QueueList
+            queue={queue}
+            user={user}
+            currentStatus={currentStatus}
+            onRemove={handleRemoveQueueEntry}
+            onJoin={handleJoinQueue}
+          />
+        </div>
+      )}
+      <div className="mt-2 flex flex-col items-center text-gray-400">
         <button onClick={handleLogout} className="mt-8 text-xs text-gray-400 underline">
           Logout
         </button>
-        <footer className="mt-10 text-xs text-gray-500">&copy; 2025 WaschGehtAb</footer>
+        <footer className="mt-4 text-xs text-gray-500">&copy; 2025 WaschGehtAb</footer>
       </div>
     </div>
   );

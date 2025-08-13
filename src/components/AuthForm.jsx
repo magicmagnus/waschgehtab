@@ -16,8 +16,8 @@ export function AuthForm({
   handleSaveUsername,
 }) {
   return (
-    <div className="bg-zinc-800 p-6 rounded-lg shadow-lg w-full max-w-xs flex flex-col items-center">
-      <div className="flex w-full mb-4 gap-2">
+    <div className="flex w-full max-w-xs flex-col items-center rounded-lg bg-zinc-800 p-6 shadow-lg">
+      <div className="mb-4 flex w-full gap-2">
         <button
           className={`flex-1 py-2 rounded-l ${!isRegister ? "bg-blue-700" : "bg-zinc-700"} text-white`}
           onClick={() => setIsRegister(false)}
@@ -35,11 +35,11 @@ export function AuthForm({
       </div>
       <form
         onSubmit={isRegister ? handleRegister : handleLogin}
-        className="w-full flex flex-col items-center"
+        className="flex w-full flex-col items-center"
       >
         <input
           type="email"
-          className="mb-2 w-full px-3 py-2 rounded bg-zinc-700 text-gray-100 focus:outline-none"
+          className="mb-2 w-full rounded bg-zinc-700 px-3 py-2 text-gray-100 focus:outline-none"
           placeholder="E-Mail-Adresse"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -48,7 +48,7 @@ export function AuthForm({
         />
         <input
           type="password"
-          className="mb-2 w-full px-3 py-2 rounded bg-zinc-700 text-gray-100 focus:outline-none"
+          className="mb-2 w-full rounded bg-zinc-700 px-3 py-2 text-gray-100 focus:outline-none"
           placeholder="Passwort"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -56,20 +56,21 @@ export function AuthForm({
           disabled={loading}
           minLength={6}
         />
+
         {isRegister && (
           <input
             type="text"
-            className="mb-2 w-full px-3 py-2 rounded bg-zinc-700 text-gray-100 focus:outline-none"
+            className="mb-2 w-full rounded bg-zinc-700 px-3 py-2 text-gray-100 focus:outline-none"
             placeholder="Anzeigename"
             value={usernameInput}
             onChange={(e) => setUsernameInput(e.target.value)}
             required
-            maxLength={24}
+            maxLength={12}
           />
         )}
         <button
           type="submit"
-          className="w-full py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 transition font-semibold"
+          className="mt-2 w-full rounded bg-blue-600 px-4 py-2 font-semibold transition hover:bg-blue-700"
           disabled={loading}
         >
           {loading
@@ -82,10 +83,10 @@ export function AuthForm({
         </button>
       </form>
       {showUsernameDialog && !isRegister && (
-        <form onSubmit={handleSaveUsername} className="w-full flex flex-col items-center mt-4">
+        <form onSubmit={handleSaveUsername} className="mt-4 flex w-full flex-col items-center">
           <input
             type="text"
-            className="mb-2 w-full px-3 py-2 rounded bg-zinc-700 text-gray-100 focus:outline-none"
+            className="mb-2 w-full rounded bg-zinc-700 px-3 py-2 text-gray-100 focus:outline-none"
             placeholder="Anzeigename"
             value={usernameInput}
             onChange={(e) => setUsernameInput(e.target.value)}
@@ -94,7 +95,7 @@ export function AuthForm({
           />
           <button
             type="submit"
-            className="w-full py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 transition font-semibold"
+            className="w-full rounded bg-blue-600 px-4 py-2 font-semibold transition hover:bg-blue-700"
           >
             Anzeigename speichern
           </button>
