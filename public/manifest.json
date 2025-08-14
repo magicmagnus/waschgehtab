@@ -1,38 +1,48 @@
 {
   "name": "WaschGehtAb",
   "short_name": "WaschGehtAb",
-  "start_url": "https://waschgehtab.netlify.app/",
+  "start_url": "/",
   "display": "standalone",
-  "description": "WaschGehtAb - Die smarte Waschmaschinen App",
+  "description": "WaschGehtAb - Die smarte Waschmaschinen App mit Client-seitigen Benachrichtigungen",
   "lang": "de",
   "dir": "auto",
-  "theme_color": "#000000",
-  "background_color": "#000000",
-  "orientation": "any",
+  "theme_color": "#22c55e",
+  "background_color": "#18181b",
+  "orientation": "portrait-primary",
   "icons": [
-    { "src": "/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ],
   "screenshots": [
     {
       "src": "/android-chrome-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "description": "The Icon"
+      "description": "WaschGehtAb App Icon"
     }
   ],
   "prefer_related_applications": false,
+  "categories": ["productivity", "utilities"],
   "shortcuts": [
     {
-      "name": "The name you would like to be displayed for your shortcut",
-      "url": "The url you would like to open when the user chooses this shortcut. This must be a URL local to your PWA. For example: If my start_url is /, this URL must be something like /shortcut",
-      "description": "A description of the functionality of this shortcut"
-    }
-  ],
-  "protocol_handlers": [
+      "name": "Waschgang starten",
+      "url": "/?action=start",
+      "description": "Direkt einen neuen Waschgang starten"
+    },
     {
-      "protocol": "web+example",
-      "url": "https://example.com/handler?url=%s"
+      "name": "Queue beitreten",
+      "url": "/?action=queue",
+      "description": "Sich in die Warteschlange einreihen"
     }
   ]
 }

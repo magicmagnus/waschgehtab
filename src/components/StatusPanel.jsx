@@ -90,10 +90,11 @@ export function StatusPanel({
           )}
           {currentStatus.phase === "paused" && currentStatus.next?.uid === user.uid && (
             <button
-              className="w-fit rounded-lg bg-yellow-500 px-5 py-4 pt-3.5 text-2xl font-bold text-yellow-100 transition hover:bg-yellow-700"
+              className="w-fit rounded-lg bg-yellow-500 px-5 py-4 pt-3.5 text-2xl font-bold text-yellow-100 transition hover:bg-yellow-700 animate-pulse"
               onClick={handleAcceptNext}
+              data-action="accept-wash"
             >
-              Ich wasche jetzt
+              🧺 Ich wasche jetzt
             </button>
           )}
         </div>

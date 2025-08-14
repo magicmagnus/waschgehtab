@@ -3,8 +3,10 @@ import { useState, useEffect } from "react";
 import { AuthForm } from "./components/AuthForm";
 import { StatusPanel } from "./components/StatusPanel";
 import { QueueList } from "./components/QueueList";
+import { NotificationSettings } from "./components/NotificationSettings";
 import { auth, db } from "./firebase";
-import { initMessaging } from "./messaging";
+import { initClientNotifications, cleanupClientNotifications } from "./clientNotifications";
+import { DebugPanel } from "./components/DebugPanel";
 import { ref, onValue, set, push, remove, get, update } from "firebase/database";
 import {
   createUserWithEmailAndPassword,
@@ -195,16 +197,25 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        // Lazy init push messaging (fire and forget)
-        initMessaging();
+        // Initialize client-side notifications
+        initClientNotifications(firebaseUser);
+      } else {
+        // Clean up when user logs out
+        cleanupClientNotifications();
       }
     });
     return () => unsubscribe();
   }, []);
 
   const handleLogout = async () => {
+    // Clean up client notifications
+    cleanupClientNotifications();
     await signOut(auth);
     setMessage("Abgemeldet.");
+  };
+
+  const handleTokenUpdate = () => {
+    // Placeholder for future use
   };
 
   return (
@@ -248,6 +259,10 @@ function App() {
             onRemove={handleRemoveQueueEntry}
             onJoin={handleJoinQueue}
           />
+          <div className="mt-6 w-full max-w-xl">
+            <NotificationSettings onTokenUpdate={handleTokenUpdate} />
+          </div>
+          <DebugPanel user={user} />
         </div>
       )}
       <div className="mt-2 flex flex-col items-center text-gray-400">
