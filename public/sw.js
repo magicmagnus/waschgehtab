@@ -21,19 +21,22 @@ self.addEventListener("notificationclick", (event) => {
 
   event.notification.close();
 
-  // Focus or open the app
-  event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && "focus" in client) {
-          return client.focus();
+  // Handle action clicks
+  if (event.action === "open" || !event.action) {
+    // Focus or open the app
+    event.waitUntil(
+      clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+        for (const client of clientList) {
+          if (client.url.includes(self.location.origin) && "focus" in client) {
+            return client.focus();
+          }
         }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow("/");
-      }
-    })
-  );
+        if (clients.openWindow) {
+          return clients.openWindow("/");
+        }
+      })
+    );
+  }
 });
 
 // Handle push events (for Android Chrome notification display)
@@ -51,11 +54,25 @@ self.addEventListener("push", (event) => {
           body: data.body || "Neue Benachrichtigung",
           icon: "/android-chrome-192x192.png",
           badge: "/android-chrome-192x192.png",
-          tag: data.tag || "default",
+          tag: data.tag || "default-" + Date.now(),
           renotify: true,
           requireInteraction: true,
-          vibrate: [200, 100, 200, 100, 200],
-          data: data.data || {},
+          // Enhanced mobile options for heads-up notifications
+          silent: false,
+          vibrate: [500, 200, 500, 200, 500, 200, 500],
+          priority: "high",
+          actions: [
+            {
+              action: "open",
+              title: "Öffnen",
+              icon: "/android-chrome-192x192.png",
+            },
+          ],
+          data: {
+            ...data.data,
+            urgency: "high",
+            timestamp: Date.now(),
+          },
         })
       );
     } catch (error) {

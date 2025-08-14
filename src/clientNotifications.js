@@ -67,17 +67,27 @@ async function sendLocalNotification(status, user) {
     console.log("Notification permission:", Notification.permission);
     console.log("User agent:", navigator.userAgent);
 
-    // Show browser notification with Android Chrome specific handling
+    // Show browser notification with mobile-specific handling
     if (Notification.permission === "granted") {
-      // Android Chrome specific options
-      const isAndroidChrome = /Android.*Chrome/i.test(navigator.userAgent);
+      // Detect mobile and browser type
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const isMobile = isAndroid || isIOS;
+      const isChrome = /Chrome/i.test(navigator.userAgent);
+      const isFirefox = /Firefox/i.test(navigator.userAgent);
       const isPWA = window.matchMedia("(display-mode: standalone)").matches;
 
-      console.log("Is Android Chrome:", isAndroidChrome);
-      console.log("Is PWA:", isPWA);
+      console.log("Device detection:", {
+        isAndroid,
+        isIOS,
+        isMobile,
+        isChrome,
+        isFirefox,
+        isPWA,
+      });
 
       // For Android Chrome, try Service Worker notification first
-      if (isAndroidChrome && "serviceWorker" in navigator) {
+      if (isAndroid && isChrome && "serviceWorker" in navigator) {
         try {
           const registration = await navigator.serviceWorker.ready;
           console.log("Using Service Worker for Android Chrome notification");
@@ -89,12 +99,25 @@ async function sendLocalNotification(status, user) {
             tag: "washing-turn-" + Date.now(),
             renotify: true,
             requireInteraction: true,
-            vibrate: [200, 100, 200, 100, 200],
+            // Mobile-specific options for pop-up behavior
+            silent: false,
+            vibrate: [300, 200, 300, 200, 300],
+            // High priority for heads-up notification
+            priority: "high",
+            // Android specific options for heads-up notifications
+            actions: [
+              {
+                action: "open",
+                title: "Öffnen",
+                icon: "/android-chrome-192x192.png",
+              },
+            ],
             data: {
               action: "washing_turn",
               machine: "washer",
               userId: user.uid,
               timestamp: Date.now(),
+              urgency: "high",
             },
           });
 
@@ -105,11 +128,11 @@ async function sendLocalNotification(status, user) {
             swError
           );
           // Fallback to regular notification
-          await sendRegularNotification(user, isAndroidChrome);
+          await sendRegularNotification(user, isMobile, isAndroid, isChrome);
         }
       } else {
-        // Regular notification for non-Android Chrome browsers
-        await sendRegularNotification(user, isAndroidChrome);
+        // Regular notification for all other browsers
+        await sendRegularNotification(user, isMobile, isAndroid, isChrome);
       }
     } else {
       console.warn("Notification permission not granted:", Notification.permission);
@@ -118,10 +141,11 @@ async function sendLocalNotification(status, user) {
     // Always show in-app notification as fallback
     showInAppNotification();
 
-    // Additional fallback for Android Chrome: try to trigger vibration directly
-    if (navigator.vibrate && /Android.*Chrome/i.test(navigator.userAgent)) {
-      navigator.vibrate([200, 100, 200, 100, 200]);
-      console.log("Direct vibration triggered for Android Chrome");
+    // Enhanced vibration for mobile devices
+    if (navigator.vibrate && /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      // Longer, more noticeable vibration pattern for mobile
+      navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
+      console.log("Enhanced mobile vibration triggered");
     }
   } catch (error) {
     console.error("Error sending local notification:", error);
@@ -131,7 +155,7 @@ async function sendLocalNotification(status, user) {
 }
 
 // Helper function for regular notifications
-async function sendRegularNotification(user, isAndroidChrome) {
+async function sendRegularNotification(user, isMobile, isAndroid, isChrome) {
   const notificationOptions = {
     body: "Die Waschmaschine ist frei. Bestätige jetzt deinen Waschgang!",
     icon: "/android-chrome-192x192.png",
@@ -144,14 +168,32 @@ async function sendRegularNotification(user, isAndroidChrome) {
       machine: "washer",
       userId: user.uid,
       timestamp: Date.now(),
+      urgency: "high",
     },
   };
 
-  // Add Android-specific options
-  if (isAndroidChrome) {
-    notificationOptions.vibrate = [200, 100, 200, 100, 200];
+  // Mobile-specific options for heads-up notifications
+  if (isMobile) {
+    // Enhanced mobile notification options
+    notificationOptions.vibrate = [500, 200, 500, 200, 500, 200, 500];
     notificationOptions.silent = false;
-    notificationOptions.tag = "washing-turn-" + Date.now(); // Unique tag for Android
+    notificationOptions.tag = "washing-turn-" + Date.now(); // Unique tag
+
+    // Try to set high priority (Android Chrome specific)
+    if (isAndroid) {
+      notificationOptions.priority = "high";
+      // Add actions to make it more likely to show as heads-up
+      notificationOptions.actions = [
+        {
+          action: "open",
+          title: "Öffnen",
+          icon: "/android-chrome-192x192.png",
+        },
+      ];
+    }
+  } else {
+    // Desktop options
+    notificationOptions.vibrate = [200, 100, 200];
   }
 
   console.log("Creating regular notification with options:", notificationOptions);
@@ -178,10 +220,12 @@ async function sendRegularNotification(user, isAndroidChrome) {
     console.log("Notification shown successfully");
   };
 
-  // Auto-close after 30 seconds (except on Android where it might not work)
-  if (!isAndroidChrome) {
+  // Auto-close behavior - different for mobile vs desktop
+  if (!isMobile) {
+    // Desktop: auto-close after 30 seconds
     setTimeout(() => notification.close(), 30000);
   }
+  // Mobile: let the system handle closing (requireInteraction = true)
 }
 
 // Show in-app notification banner
