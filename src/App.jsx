@@ -4,6 +4,7 @@ import { AuthForm } from "./components/AuthForm";
 import { StatusPanel } from "./components/StatusPanel";
 import { QueueList } from "./components/QueueList";
 import { auth, db } from "./firebase";
+import { initMessaging } from "./messaging";
 import { ref, onValue, set, push, remove, get, update } from "firebase/database";
 import {
   createUserWithEmailAndPassword,
@@ -193,6 +194,10 @@ function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
+      if (firebaseUser) {
+        // Lazy init push messaging (fire and forget)
+        initMessaging();
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -203,7 +208,7 @@ function App() {
   };
 
   return (
-    <div className="min-w-screen flex min-h-screen flex-col items-center justify-between bg-zinc-900 p-6 pt-4 text-gray-100 shadow-lg">
+    <div className="min-w-screen flex min-h-[100dvh] flex-col items-center justify-between bg-zinc-900 p-6 pt-4 text-gray-100 shadow-lg">
       {message && <div className="mb-4 text-center text-sm text-blue-400">{message}</div>}
       {!user || showUsernameDialog ? (
         <AuthForm
