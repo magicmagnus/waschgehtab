@@ -16,7 +16,7 @@ export function QueueList({ queue, user, currentStatus, onRemove, onJoin }) {
       </div>
       <div className="mt-4 h-0.5 rounded-full bg-zinc-400"></div>
       {queue.length === 0 ? (
-        <p className="text-gray-400">Niemand wartet...</p>
+        <p className="mt-2 text-gray-400">Niemand wartet...</p>
       ) : (
         <ul className="mt-2 list-inside list-disc">
           {queue.map((entry, index) => (

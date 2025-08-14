@@ -25,7 +25,7 @@ export function DebugPanel({ user }) {
       setTestResult("Sending finished notification test...");
       const mockNextUser = { uid: "test-next-uid", name: "Anna Schmidt" };
       await sendFinishedNotification(mockNextUser, user);
-      setTestResult("✅ Finished notification sent! Check your screen and browser notifications.");
+      setTestResult("✅ Finished notification sent! Check your screen for the in-app popup.");
     } catch (error) {
       setTestResult(`❌ Finished notification error: ${error.message}`);
     }

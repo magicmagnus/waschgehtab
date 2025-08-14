@@ -81,7 +81,7 @@ export function StatusPanel({
               onClick={handleAcceptNext}
               data-action="accept-wash"
             >
-              🧺 Ich wasche jetzt
+              Ich wasche jetzt
             </button>
           )}
         </div>

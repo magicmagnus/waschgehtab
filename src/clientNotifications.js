@@ -8,64 +8,42 @@ import { auth, db } from "./firebase";
 
 // Centralized notification message templates
 const NOTIFICATION_MESSAGES = {
-  title: "🧺 Du bist dran!",
-
-  // Browser notification body templates
-  browser: {
-    // When someone finishes and next person gets notified
-    nextUserNotification: (previousName) =>
-      `Die Waschmaschine ist frei. ${previousName} hat gerade fertig gewaschen. Bestätige jetzt deinen Waschgang!`,
-    // When someone finishes and they get confirmation (ready for future enhancement)
-    finishedConfirmation: (nextName) =>
-      `Waschgang beendet! ${nextName} wurde benachrichtigt. Gib den Schlüssel an ${nextName} weiter.`,
+  // For the NEXT user (person who gets notified they can start washing)
+  nextUser: {
+    title: (previousName) => `${previousName} ist fertig!`,
+    body: (previousName) =>
+      `Die Waschmaschine ist frei. Hol' dir den Schlüssel von ${previousName}.`,
   },
 
-  // In-app notification templates
-  inApp: {
-    title: "Du bist dran!",
-    // When someone finishes and next person gets notified
-    nextUserText: (previousName) => `${previousName} hat gerade fertig gewaschen.`,
-    keyReminder: "Hol dir den Schlüssel ab!",
-    // When someone finishes and they get confirmation (ready for future enhancement)
-    finishedTitle: "Waschgang beendet!",
-    finishedText: (nextName) => `${nextName} wurde benachrichtigt.`,
-    handoverReminder: (nextName) => `Gib den Schlüssel an ${nextName} weiter.`,
+  // For the PREVIOUS user (person who just finished washing)
+  previousUser: {
+    title: (nextName) => `${nextName} möchte jetzt waschen.`,
+    body: (nextName) => `Gib den Schlüssel an ${nextName} weiter.`,
   },
 };
 
-// Helper function to generate notification messages
+// Helper function to generate notification messages for next user
 function getNotificationMessages(status) {
-  // Current implementation: Notify the next user about who was washing before
-  // This helps with key handover coordination
   if (status?.previous?.name) {
     return {
-      title: NOTIFICATION_MESSAGES.title,
-      browserBody: NOTIFICATION_MESSAGES.browser.nextUserNotification(status.previous.name),
-      inAppTitle: NOTIFICATION_MESSAGES.inApp.title,
-      inAppText: NOTIFICATION_MESSAGES.inApp.nextUserText(status.previous.name),
-      inAppKeyReminder: NOTIFICATION_MESSAGES.inApp.keyReminder,
+      title: NOTIFICATION_MESSAGES.nextUser.title(status.previous.name),
+      body: NOTIFICATION_MESSAGES.nextUser.body(status.previous.name),
     };
   }
 
   // Fallback for edge cases (should rarely happen in normal flow)
   console.warn("No previous user information found in status - this is unexpected in normal flow");
   return {
-    title: NOTIFICATION_MESSAGES.title,
-    browserBody: "Die Waschmaschine ist frei. Bestätige jetzt deinen Waschgang!",
-    inAppTitle: NOTIFICATION_MESSAGES.inApp.title,
-    inAppText: "Die Waschmaschine ist frei",
-    inAppKeyReminder: null,
+    title: "Du bist dran!",
+    body: "Die Waschmaschine ist frei. Bestätige jetzt deinen Waschgang!",
   };
 }
 
 // Helper function to generate notification messages for user who just finished
 function getFinishedNotificationMessages(nextUser) {
   return {
-    title: NOTIFICATION_MESSAGES.inApp.finishedTitle,
-    browserBody: NOTIFICATION_MESSAGES.browser.finishedConfirmation(nextUser.name),
-    inAppTitle: NOTIFICATION_MESSAGES.inApp.finishedTitle,
-    inAppText: NOTIFICATION_MESSAGES.inApp.finishedText(nextUser.name),
-    inAppKeyReminder: NOTIFICATION_MESSAGES.inApp.handoverReminder(nextUser.name),
+    title: NOTIFICATION_MESSAGES.previousUser.title(nextUser.name),
+    body: NOTIFICATION_MESSAGES.previousUser.body(nextUser.name),
   };
 }
 
@@ -159,7 +137,7 @@ async function sendLocalNotification(status, user) {
           console.log("Using Service Worker for Android Chrome notification");
 
           await registration.showNotification(messages.title, {
-            body: messages.browserBody,
+            body: messages.body,
             icon: "/android-chrome-192x192.png",
             badge: "/android-chrome-192x192.png",
             tag: "washing-turn-" + Date.now(),
@@ -224,7 +202,7 @@ async function sendLocalNotification(status, user) {
 // Helper function for regular notifications
 async function sendRegularNotification(user, isMobile, isAndroid, isChrome, messages, status) {
   const notificationOptions = {
-    body: messages.browserBody,
+    body: messages.body,
     icon: "/android-chrome-192x192.png",
     badge: "/android-chrome-192x192.png",
     tag: "washing-turn",
@@ -327,10 +305,9 @@ function showInAppNotification(status, messages) {
     <div style="display: flex; align-items: center; gap: 12px;">
       <span style="font-size: 24px;">🧺</span>
       <div>
-        <div style="font-size: 18px; margin-bottom: 4px;">${notificationMessages.inAppTitle}</div>
+        <div style="font-size: 18px; margin-bottom: 4px;">${notificationMessages.title}</div>
         <div style="font-size: 14px; opacity: 0.9; line-height: 1.3;">
-          ${notificationMessages.inAppText}
-          ${notificationMessages.inAppKeyReminder ? `<br>${notificationMessages.inAppKeyReminder}` : ""}
+          ${notificationMessages.body}
         </div>
       </div>
     </div>
@@ -385,68 +362,7 @@ export async function sendFinishedNotification(nextUser, currentUser) {
     // Get centralized notification messages for finished user
     const messages = getFinishedNotificationMessages(nextUser);
 
-    // Show browser notification
-    if (Notification.permission === "granted") {
-      // Detect mobile and browser type
-      const isAndroid = /Android/i.test(navigator.userAgent);
-      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-      const isMobile = isAndroid || isIOS;
-      const isChrome = /Chrome/i.test(navigator.userAgent);
-
-      // For Android Chrome, try Service Worker notification first
-      if (isAndroid && isChrome && "serviceWorker" in navigator) {
-        try {
-          const registration = await navigator.serviceWorker.ready;
-          console.log("Using Service Worker for finished notification");
-
-          await registration.showNotification(messages.title, {
-            body: messages.browserBody,
-            icon: "/android-chrome-192x192.png",
-            badge: "/android-chrome-192x192.png",
-            tag: "washing-finished-" + Date.now(),
-            renotify: true,
-            requireInteraction: true,
-            silent: false,
-            vibrate: [200, 100, 200],
-            priority: "normal",
-            data: {
-              action: "washing_finished",
-              machine: "washer",
-              userId: currentUser.uid,
-              nextUser: nextUser,
-              timestamp: Date.now(),
-            },
-          });
-
-          console.log("Service Worker finished notification sent successfully");
-        } catch (swError) {
-          console.warn("Service Worker finished notification failed, falling back:", swError);
-          // Fallback to regular notification
-          await sendRegularFinishedNotification(
-            currentUser,
-            isMobile,
-            isAndroid,
-            isChrome,
-            messages,
-            nextUser
-          );
-        }
-      } else {
-        // Regular notification for all other browsers
-        await sendRegularFinishedNotification(
-          currentUser,
-          isMobile,
-          isAndroid,
-          isChrome,
-          messages,
-          nextUser
-        );
-      }
-    } else {
-      console.warn("Notification permission not granted for finished notification");
-    }
-
-    // Always show in-app notification
+    // Only show in-app notification (no browser/system notification)
     showFinishedInAppNotification(nextUser, messages);
 
     // Light vibration for mobile devices
@@ -459,62 +375,6 @@ export async function sendFinishedNotification(nextUser, currentUser) {
     // Always show in-app notification as fallback
     showFinishedInAppNotification(nextUser, getFinishedNotificationMessages(nextUser));
   }
-}
-
-// Helper function for regular finished notifications
-async function sendRegularFinishedNotification(
-  user,
-  isMobile,
-  isAndroid,
-  isChrome,
-  messages,
-  nextUser
-) {
-  const notificationOptions = {
-    body: messages.browserBody,
-    icon: "/android-chrome-192x192.png",
-    badge: "/android-chrome-192x192.png",
-    tag: "washing-finished",
-    renotify: true,
-    requireInteraction: false, // Less intrusive for finished notification
-    data: {
-      action: "washing_finished",
-      machine: "washer",
-      userId: user.uid,
-      nextUser: nextUser,
-      timestamp: Date.now(),
-    },
-  };
-
-  // Mobile-specific options
-  if (isMobile) {
-    notificationOptions.vibrate = [200, 100, 200];
-    notificationOptions.silent = false;
-    notificationOptions.tag = "washing-finished-" + Date.now();
-  } else {
-    notificationOptions.vibrate = [100, 50, 100];
-  }
-
-  console.log("Creating regular finished notification with options:", notificationOptions);
-
-  const notification = new Notification(messages.title, notificationOptions);
-
-  notification.onclick = () => {
-    console.log("Finished notification clicked");
-    window.focus();
-    notification.close();
-  };
-
-  notification.onerror = (error) => {
-    console.error("Finished notification error:", error);
-  };
-
-  notification.onshow = () => {
-    console.log("Finished notification shown successfully");
-  };
-
-  // Auto-close after 10 seconds (shorter than regular notifications)
-  setTimeout(() => notification.close(), 10000);
 }
 
 // Show in-app notification banner for finished washing
@@ -545,10 +405,9 @@ function showFinishedInAppNotification(nextUser, messages) {
     <div style="display: flex; align-items: center; gap: 12px;">
       <span style="font-size: 24px;">✅</span>
       <div>
-        <div style="font-size: 18px; margin-bottom: 4px;">${messages.inAppTitle}</div>
+        <div style="font-size: 18px; margin-bottom: 4px;">${messages.title}</div>
         <div style="font-size: 14px; opacity: 0.9; line-height: 1.3;">
-          ${messages.inAppText}
-          <br>${messages.inAppKeyReminder}
+          ${messages.body}
         </div>
       </div>
     </div>
