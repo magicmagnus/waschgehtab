@@ -35,7 +35,7 @@ export function DebugPanel({ user }) {
         <div>
           <div className="text-zinc-400">Client Notifications:</div>
           <div className="space-y-2">
-            <div className="text-green-400 text-[10px]">
+            <div className="text-[10px] text-green-400">
               ✅ Active - Real-time status monitoring
             </div>
             <button
@@ -66,9 +66,22 @@ export function DebugPanel({ user }) {
               ? `${Notification.permission === "granted" ? "✅" : "⚠️"} ${Notification.permission}`
               : "❌ Not supported"}
           </div>
+          <div>
+            Browser: {navigator.userAgent.includes("Chrome") ? "Chrome" : "Firefox"}
+            {navigator.userAgent.includes("Android") ? " (Android)" : " (Desktop)"}
+          </div>
+          <div>
+            PWA Mode: {window.matchMedia("(display-mode: standalone)").matches ? "✅ Yes" : "❌ No"}
+          </div>
+          <div>Vibration: {navigator.vibrate ? "✅ Supported" : "❌ Not supported"}</div>
           <div className="mt-1">
             <strong>System:</strong> Client-side only (no Cloud Functions needed)
           </div>
+          {navigator.userAgent.includes("Android") && navigator.userAgent.includes("Chrome") && (
+            <div className="mt-1 text-yellow-400">
+              <strong>Android Chrome:</strong> Notifications may need app interaction first
+            </div>
+          )}
         </div>
       </div>
     </div>

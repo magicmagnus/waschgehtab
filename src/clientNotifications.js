@@ -64,44 +64,123 @@ async function shouldNotifyUser(status, userUid) {
 async function sendLocalNotification(status, user) {
   try {
     console.log("Sending local notification to user:", user.uid);
+    console.log("Notification permission:", Notification.permission);
+    console.log("User agent:", navigator.userAgent);
 
-    // Show browser notification
+    // Show browser notification with Android Chrome specific handling
     if (Notification.permission === "granted") {
-      const notification = new Notification("🧺 Du bist dran!", {
-        body: "Die Waschmaschine ist frei. Bestätige jetzt deinen Waschgang!",
-        icon: "/android-chrome-192x192.png",
-        badge: "/android-chrome-192x192.png",
-        tag: "washing-turn",
-        requireInteraction: true,
-        vibrate: [200, 100, 200, 100, 200],
-        data: {
-          action: "washing_turn",
-          machine: "washer",
-          userId: user.uid,
-          timestamp: Date.now(),
-        },
-      });
+      // Android Chrome specific options
+      const isAndroidChrome = /Android.*Chrome/i.test(navigator.userAgent);
+      const isPWA = window.matchMedia("(display-mode: standalone)").matches;
 
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
+      console.log("Is Android Chrome:", isAndroidChrome);
+      console.log("Is PWA:", isPWA);
 
-        // Optionally scroll to the action button or show a highlight
-        const acceptButton = document.querySelector('[data-action="accept-wash"]');
-        if (acceptButton) {
-          acceptButton.scrollIntoView({ behavior: "smooth" });
-          acceptButton.style.animation = "pulse 2s";
+      // For Android Chrome, try Service Worker notification first
+      if (isAndroidChrome && "serviceWorker" in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          console.log("Using Service Worker for Android Chrome notification");
+
+          await registration.showNotification("🧺 Du bist dran!", {
+            body: "Die Waschmaschine ist frei. Bestätige jetzt deinen Waschgang!",
+            icon: "/android-chrome-192x192.png",
+            badge: "/android-chrome-192x192.png",
+            tag: "washing-turn-" + Date.now(),
+            renotify: true,
+            requireInteraction: true,
+            vibrate: [200, 100, 200, 100, 200],
+            data: {
+              action: "washing_turn",
+              machine: "washer",
+              userId: user.uid,
+              timestamp: Date.now(),
+            },
+          });
+
+          console.log("Service Worker notification sent successfully");
+        } catch (swError) {
+          console.warn(
+            "Service Worker notification failed, falling back to regular notification:",
+            swError
+          );
+          // Fallback to regular notification
+          await sendRegularNotification(user, isAndroidChrome);
         }
-      };
-
-      // Auto-close after 30 seconds
-      setTimeout(() => notification.close(), 30000);
+      } else {
+        // Regular notification for non-Android Chrome browsers
+        await sendRegularNotification(user, isAndroidChrome);
+      }
+    } else {
+      console.warn("Notification permission not granted:", Notification.permission);
     }
 
-    // Also show in-app notification if possible
+    // Always show in-app notification as fallback
     showInAppNotification();
+
+    // Additional fallback for Android Chrome: try to trigger vibration directly
+    if (navigator.vibrate && /Android.*Chrome/i.test(navigator.userAgent)) {
+      navigator.vibrate([200, 100, 200, 100, 200]);
+      console.log("Direct vibration triggered for Android Chrome");
+    }
   } catch (error) {
     console.error("Error sending local notification:", error);
+    // Always show in-app notification as fallback
+    showInAppNotification();
+  }
+}
+
+// Helper function for regular notifications
+async function sendRegularNotification(user, isAndroidChrome) {
+  const notificationOptions = {
+    body: "Die Waschmaschine ist frei. Bestätige jetzt deinen Waschgang!",
+    icon: "/android-chrome-192x192.png",
+    badge: "/android-chrome-192x192.png",
+    tag: "washing-turn",
+    renotify: true,
+    requireInteraction: true,
+    data: {
+      action: "washing_turn",
+      machine: "washer",
+      userId: user.uid,
+      timestamp: Date.now(),
+    },
+  };
+
+  // Add Android-specific options
+  if (isAndroidChrome) {
+    notificationOptions.vibrate = [200, 100, 200, 100, 200];
+    notificationOptions.silent = false;
+    notificationOptions.tag = "washing-turn-" + Date.now(); // Unique tag for Android
+  }
+
+  console.log("Creating regular notification with options:", notificationOptions);
+
+  const notification = new Notification("🧺 Du bist dran!", notificationOptions);
+
+  notification.onclick = () => {
+    console.log("Notification clicked");
+    window.focus();
+    notification.close();
+
+    const acceptButton = document.querySelector('[data-action="accept-wash"]');
+    if (acceptButton) {
+      acceptButton.scrollIntoView({ behavior: "smooth" });
+      acceptButton.style.animation = "pulse 2s";
+    }
+  };
+
+  notification.onerror = (error) => {
+    console.error("Notification error:", error);
+  };
+
+  notification.onshow = () => {
+    console.log("Notification shown successfully");
+  };
+
+  // Auto-close after 30 seconds (except on Android where it might not work)
+  if (!isAndroidChrome) {
+    setTimeout(() => notification.close(), 30000);
   }
 }
 
