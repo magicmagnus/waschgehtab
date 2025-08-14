@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { testClientNotification } from "../clientNotifications";
+import { testClientNotification, sendFinishedNotification } from "../clientNotifications";
 
 export function DebugPanel({ user }) {
   const [testResult, setTestResult] = useState("");
@@ -20,8 +20,22 @@ export function DebugPanel({ user }) {
     setTimeout(() => setTestResult(""), 5000);
   };
 
+  const testFinishedNotification = async () => {
+    try {
+      setTestResult("Sending finished notification test...");
+      const mockNextUser = { uid: "test-next-uid", name: "Anna Schmidt" };
+      await sendFinishedNotification(mockNextUser, user);
+      setTestResult("✅ Finished notification sent! Check your screen and browser notifications.");
+    } catch (error) {
+      setTestResult(`❌ Finished notification error: ${error.message}`);
+    }
+
+    // Clear result after 5 seconds
+    setTimeout(() => setTestResult(""), 5000);
+  };
+
   return (
-    <div className="mt-4 w-full max-w-xl rounded border border-zinc-700 bg-zinc-800 p-3 text-xs text-zinc-300">
+    <div className="mt-6 w-full max-w-xl rounded-lg border border-zinc-700 bg-zinc-800 p-3 text-xs text-zinc-300">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-zinc-200">Debug Panel</h3>
         <span className="text-[10px] opacity-70">env: {import.meta.env.MODE}</span>
@@ -43,6 +57,12 @@ export function DebugPanel({ user }) {
               className="rounded bg-green-600 px-2 py-1 text-[10px] hover:bg-green-500"
             >
               Test Client Notification
+            </button>
+            <button
+              onClick={testFinishedNotification}
+              className="rounded bg-blue-600 px-2 py-1 text-[10px] hover:bg-blue-500"
+            >
+              Test Finished Notification
             </button>
           </div>
         </div>

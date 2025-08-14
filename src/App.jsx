@@ -5,7 +5,11 @@ import { StatusPanel } from "./components/StatusPanel";
 import { QueueList } from "./components/QueueList";
 import { NotificationSettings } from "./components/NotificationSettings";
 import { auth, db } from "./firebase";
-import { initClientNotifications, cleanupClientNotifications } from "./clientNotifications";
+import {
+  initClientNotifications,
+  cleanupClientNotifications,
+  sendFinishedNotification,
+} from "./clientNotifications";
 import { DebugPanel } from "./components/DebugPanel";
 import { ref, onValue, set, push, remove, get, update } from "firebase/database";
 import {
@@ -156,6 +160,13 @@ function App() {
     if (!user) return;
     const statusRef = ref(db, `machines/${MACHINE_ID}/status`);
     const queueRef = ref(db, `machines/${MACHINE_ID}/queue`);
+
+    // Store current user info as "previous" user for the notification
+    const previousUser = {
+      uid: user.uid,
+      name: username,
+    };
+
     // Prüfe Queue und setze paused mit nächstem Kandidaten, sonst frei setzen
     const queueSnap = await get(queueRef);
     const val = queueSnap.val();
@@ -167,8 +178,13 @@ function App() {
         const first = entries[0];
         await set(statusRef, {
           phase: "paused",
+          previous: previousUser, // Add previous user info for notifications
           next: { id: first.id, uid: first.uid, name: first.name },
         });
+
+        // Send notification to the user who just finished about who's next
+        await sendFinishedNotification(first, { uid: user.uid, name: username });
+
         return; // Eintrag bleibt in der Queue bis Annahme
       }
     }
@@ -238,7 +254,7 @@ function App() {
           handleSaveUsername={handleSaveUsername}
         />
       ) : (
-        <div className="flex w-full flex-col items-center">
+        <div className="flex w-full max-w-xl flex-col items-center">
           <StatusPanel
             user={user}
             username={username}

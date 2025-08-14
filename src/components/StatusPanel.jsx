@@ -30,23 +30,10 @@ export function StatusPanel({
       currentBGColor = "bg-zinc-100";
   }
   return (
-    <div className="flex w-full flex-col items-center justify-center pb-4">
+    <div className="flex w-full flex-col items-center justify-center">
       <h1 className="mb-10 mt-10 text-4xl font-semibold">Hallo, {username || user.email}!</h1>
       <div
-        className={`${currentTextColor} ${currentBGColor} w-full flex flex-col h-72 min-h-[17rem] items-stretch p-5 shadow-xl rounded-xl`}
-        style={{
-          boxShadow: `  0 0 15px 10px ${
-            currentTextColor === "text-green-500"
-              ? "#22c55e"
-              : currentTextColor === "text-red-500"
-                ? "#ef4444"
-                : currentTextColor === "text-yellow-500"
-                  ? "#eab308"
-                  : currentTextColor === "text-gray-500"
-                    ? "#6b7280"
-                    : "#a1a1aa"
-          }`,
-        }}
+        className={`${currentTextColor} ${currentBGColor} w-full flex flex-col h-72 min-h-[17rem] items-stretch p-5 shadow-xl border rounded-lg`}
       >
         <div className="flex flex-1 flex-col items-center justify-center text-center">
           {currentStatus.phase === "free" && (
@@ -90,7 +77,7 @@ export function StatusPanel({
           )}
           {currentStatus.phase === "paused" && currentStatus.next?.uid === user.uid && (
             <button
-              className="w-fit rounded-lg bg-yellow-500 px-5 py-4 pt-3.5 text-2xl font-bold text-yellow-100 transition hover:bg-yellow-700 animate-pulse"
+              className="w-fit animate-pulse rounded-lg bg-yellow-500 px-5 py-4 pt-3.5 text-2xl font-bold text-yellow-100 transition hover:bg-yellow-700"
               onClick={handleAcceptNext}
               data-action="accept-wash"
             >
