@@ -1,7 +1,7 @@
 {
   "name": "WaschGehtAb",
   "short_name": "WaschGehtAb",
-  "start_url": "waschgehtab.netlify.app",
+  "start_url": "https://waschgehtab.netlify.app/",
   "display": "standalone",
   "description": "WaschGehtAb - Die smarte Waschmaschinen App",
   "lang": "de",
@@ -15,10 +15,10 @@
   ],
   "screenshots": [
     {
-      "src": "https://www.pwabuilder.com/assets/screenshots/screen1.png",
-      "sizes": "2880x1800",
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "description": "A screenshot of the home page"
+      "description": "The Icon"
     }
   ],
   "prefer_related_applications": false,
