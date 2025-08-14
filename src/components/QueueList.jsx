@@ -1,6 +1,6 @@
 export function QueueList({ queue, user, currentStatus, onRemove, onJoin }) {
   return (
-    <div className="mt-2 w-full rounded-lg bg-zinc-800 p-4 shadow-lg">
+    <div className="mt-2 w-full rounded-lg bg-zinc-950 p-4 shadow-lg">
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className="text-xl font-semibold">Warteschlange</h2>
         {currentStatus.phase !== "free" && (
@@ -10,7 +10,7 @@ export function QueueList({ queue, user, currentStatus, onRemove, onJoin }) {
             className="flex items-center justify-center rounded-lg bg-indigo-600 px-2 py-1 text-xs transition hover:bg-indigo-700"
           >
             <i className="fa-solid fa-plus mr-2 text-xl"></i>
-            <p className="text-lg font-semibold">Ich will auch</p>
+            <p className="pb-0.5 text-lg font-semibold">Ich will auch</p>
           </button>
         )}
       </div>
