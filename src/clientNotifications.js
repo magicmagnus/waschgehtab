@@ -20,6 +20,18 @@ const NOTIFICATION_MESSAGES = {
     title: (nextName) => `${nextName} möchte jetzt waschen.`,
     body: (nextName) => `Gib den Schlüssel an ${nextName} weiter.`,
   },
+
+  // For timer expiration
+  timerExpired: {
+    title: "Waschgang beendet!",
+    body: "Deine eingestellte Waschzeit ist abgelaufen. Bitte beende den Waschgang.",
+  },
+
+  // For next user when timer expires
+  timerExpiredNext: {
+    title: (currentName) => `${currentName}s Waschzeit ist abgelaufen!`,
+    body: (currentName) => `Die Waschmaschine sollte bald frei sein. Halte dich bereit!`,
+  },
 };
 
 // Helper function to generate notification messages for next user
@@ -453,7 +465,108 @@ function showFinishedInAppNotification(nextUser, messages) {
   });
 }
 
-// Clean up watcher
+// Send notification for timer expiration
+export async function sendTimerExpiredNotification(currentUser, queue) {
+  try {
+    console.log("Sending timer expired notification to user:", currentUser.uid);
+
+    // Send notification to current user
+    if ("Notification" in window && Notification.permission === "granted") {
+      const notification = new Notification(NOTIFICATION_MESSAGES.timerExpired.title, {
+        body: NOTIFICATION_MESSAGES.timerExpired.body,
+        icon: "/android-chrome-192x192.png",
+        tag: "timer-expired",
+        requireInteraction: true,
+        vibrate: [500, 200, 500, 200, 500],
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+    }
+
+    // Show in-app notification for current user ONLY
+    // The "user X's timer expired" message for queue users should be handled
+    // by a separate mechanism that only shows to other users, not here
+    showTimerExpiredInAppNotification(true);
+
+    // Enhanced vibration for mobile devices
+    if (navigator.vibrate && /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      navigator.vibrate([500, 200, 500, 200, 500]);
+    }
+  } catch (error) {
+    console.error("Error sending timer expired notification:", error);
+    // Always show in-app notification as fallback
+    showTimerExpiredInAppNotification(true);
+  }
+}
+
+// Show in-app notification for timer expiration
+function showTimerExpiredInAppNotification(isCurrentUser, currentUserName = null) {
+  const messages = isCurrentUser
+    ? NOTIFICATION_MESSAGES.timerExpired
+    : {
+        title: NOTIFICATION_MESSAGES.timerExpiredNext.title(currentUserName),
+        body: NOTIFICATION_MESSAGES.timerExpiredNext.body(currentUserName),
+      };
+
+  // Create in-app notification
+  const notification = document.createElement("div");
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, ${isCurrentUser ? "#ef4444, #dc2626" : "#f59e0b, #d97706"});
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(${isCurrentUser ? "239, 68, 68" : "245, 158, 11"}, 0.4);
+    z-index: 10000;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    text-align: center;
+    min-width: 300px;
+    max-width: 90vw;
+    animation: slideDown 0.5s ease-out;
+  `;
+
+  notification.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 24px;">${isCurrentUser ? "⏰" : "⏱️"}</span>
+      <div>
+        <div style="font-size: 18px; margin-bottom: 4px;">${messages.title}</div>
+        <div style="font-size: 14px; opacity: 0.9; line-height: 1.3;">
+          ${messages.body}
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(notification);
+
+  // Remove after longer time for timer notifications (15 seconds)
+  setTimeout(() => {
+    notification.style.animation = "slideUp 0.5s ease-in forwards";
+    setTimeout(() => {
+      if (document.body.contains(notification)) {
+        document.body.removeChild(notification);
+      }
+    }, 500);
+  }, 15000);
+
+  // Click to dismiss
+  notification.addEventListener("click", () => {
+    notification.style.animation = "slideUp 0.5s ease-in forwards";
+    setTimeout(() => {
+      if (document.body.contains(notification)) {
+        document.body.removeChild(notification);
+      }
+    }, 500);
+  });
+}
 export function cleanupClientNotifications() {
   if (statusWatcher) {
     statusWatcher();

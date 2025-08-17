@@ -4,11 +4,13 @@ import { AuthForm } from "./components/AuthForm";
 import { StatusPanel } from "./components/StatusPanel";
 import { QueueList } from "./components/QueueList";
 import { NotificationSettings } from "./components/NotificationSettings";
+import { TimerSettings } from "./components/TimerSettings";
 import { auth, db } from "./firebase";
 import {
   initClientNotifications,
   cleanupClientNotifications,
   sendFinishedNotification,
+  sendTimerExpiredNotification,
 } from "./clientNotifications";
 import { DebugPanel } from "./components/DebugPanel";
 import { ref, onValue, set, push, remove, get, update } from "firebase/database";
@@ -41,6 +43,8 @@ function App() {
   const [username, setUsername] = useState("");
   const [showUsernameDialog, setShowUsernameDialog] = useState(false);
   const [usernameInput, setUsernameInput] = useState("");
+  const [showTimerSettings, setShowTimerSettings] = useState(false);
+  const [pendingQueueAcceptance, setPendingQueueAcceptance] = useState(null);
 
   // IDs für Geräte
   const MACHINE_ID = "washer";
@@ -145,7 +149,49 @@ function App() {
     const status = statusSnap.val();
     const phase = !status || status === "Frei" || !status.uid ? "free" : status.phase || "busy";
     if (phase !== "free") return; // safeguard
-    await set(statusRef, { phase: "busy", uid: user.uid, name: username });
+
+    // Show timer selection dialog
+    setShowTimerSettings(true);
+  };
+
+  // Start wash with timer (called from TimerSettings component)
+  const handleStartWashWithTimer = async (durationMs) => {
+    if (!user || !username) return;
+
+    const statusData = {
+      phase: "busy",
+      uid: user.uid,
+      name: username,
+    };
+
+    // Add timer data if duration is provided
+    if (durationMs) {
+      statusData.timer = {
+        startTime: Date.now(),
+        duration: durationMs,
+      };
+    }
+
+    // Check if this is from queue acceptance
+    if (pendingQueueAcceptance) {
+      // Accept from queue with timer
+      await update(ref(db), {
+        [`machines/${MACHINE_ID}/status`]: statusData,
+        [`machines/${MACHINE_ID}/queue/${pendingQueueAcceptance.id}`]: null,
+      });
+      setPendingQueueAcceptance(null);
+    } else {
+      // Regular start wash
+      await set(ref(db, `machines/${MACHINE_ID}/status`), statusData);
+    }
+  };
+
+  // Handle timer expiration
+  const handleTimerEnd = async () => {
+    if (!user || currentStatus.uid !== user.uid) return;
+
+    // Send comprehensive timer expired notifications
+    await sendTimerExpiredNotification({ uid: user.uid, name: username }, queue);
   };
 
   // Sich in die Queue eintragen (immer möglich, auch mehrfach)
@@ -198,10 +244,10 @@ function App() {
     const next = currentStatus.next;
     // Nur der vorgesehene Nutzer darf übernehmen
     if (next.uid !== user.uid) return;
-    await update(ref(db), {
-      [`machines/${MACHINE_ID}/status`]: { phase: "busy", uid: next.uid, name: next.name },
-      [`machines/${MACHINE_ID}/queue/${next.id}`]: null,
-    });
+
+    // Store pending queue acceptance and show timer dialog
+    setPendingQueueAcceptance(next);
+    setShowTimerSettings(true);
   };
 
   // Eigenen Eintrag aus der Queue entfernen
@@ -267,6 +313,15 @@ function App() {
             handleAcceptNext={handleAcceptNext}
             handleRemoveQueueEntry={handleRemoveQueueEntry}
             handleLogout={handleLogout}
+            onTimerEnd={handleTimerEnd}
+          />
+          <TimerSettings
+            isVisible={showTimerSettings}
+            onStartWithTimer={handleStartWashWithTimer}
+            onClose={() => {
+              setShowTimerSettings(false);
+              setPendingQueueAcceptance(null);
+            }}
           />
           <QueueList
             queue={queue}
